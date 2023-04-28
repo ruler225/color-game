@@ -1,34 +1,37 @@
 #include "header/aabb.hpp"
-#include "header/game.hpp"
-#include<math.h>
+#include "header/gameController.hpp"
+#include <math.h>
+#include <algorithm>
+#include <cstdlib>
 
-AABB::AABB(Vector3 minVec, Vector3 maxVec, Vector3 pos, Color c): min(minVec), max(maxVec), color(c) {}
- AABB::AABB(Vector3 minVec, Vector3 maxVec, Vector3 pos): min(minVec), max(maxVec), pos(pos) {color = RED;}
+AABB::AABB(Vector3 minVec, Vector3 maxVec, Vector3 pos, Color c)
+  : min(minVec), max(maxVec), color(c), pos(pos) {}
 
-AABB::AABB() {
-    Vector3 minVec, maxVec = {0, 0, 0};
-    min = minVec;
-    max = maxVec;
-    pos = {0, 0, 0};
-}
+AABB::AABB() { pos = max = min = {0, 0, 0}; }
 
 float AABB::area() {
-    return abs((max[0] - min[0])*(max[1] - min[1])*(max[2] - min[2]));
+  return abs((max[0] - min[0]) * (max[1] - min[1]) * (max[2] - min[2]));
 }
 
 bool AABB::isColliding(AABB &obj) {
-    return obj.max[0] > this->min[0] && obj.min[0] < this->max[0] &&
-            obj.max[1] > this->min[1] && obj.min[1] < this->max[1] &&
-            obj.max[2] > this->min[2] && obj.min[2] < this->max[2];
+  if (color == GameController::getInstance().getColor())
+    return pureCollision(obj);
+  return false;
+}
+
+bool AABB::pureCollision(AABB &obj) {
+  return obj.getMax()[0] > this->getMin()[0] && obj.getMin()[0] < this->getMax()[0] &&
+         obj.getMax()[1] > this->getMin()[1] && obj.getMin()[1] < this->getMax()[1] &&
+         obj.getMax()[2] > this->getMin()[2] && obj.getMin()[2] < this->getMax()[2];
 }
 
 Color AABB::getColor() { return color; }
 
 Vector3 AABB::getMin() {
-  return Vector3{getMin()[0] + pos[0], getMin()[1] + pos[1],
-                 getMin()[2] + pos[2]};
+  return Vector3{min[0] + pos[0], min[1] + pos[1],
+                 min[2] + pos[2]};
 }
 Vector3 AABB::getMax() {
-  return Vector3{AABB::getMax()[0] + pos[0], AABB::getMax()[1] + pos[1],
-                 AABB::getMax()[2] + pos[2]};
+  return Vector3{AABB::max[0] + pos[0], AABB::max[1] + pos[1],
+                 AABB::max[2] + pos[2]};
 }

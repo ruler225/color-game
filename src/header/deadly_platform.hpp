@@ -3,8 +3,8 @@
 #include "aabb.hpp"
 #include "model.hpp"
 #include "platform.hpp"
-class DeadlyPlatform: Platform {
+class DeadlyPlatform : public Platform {
 public:
-  DeadlyPlatform(Model model, Vector3 iPos, Color c): Platform(model, iPos, c) {}
-  bool isColliding(AABB);
+  DeadlyPlatform(Model model, Vector3 iPos, Color c = RED);
+  bool isColliding(AABB &) override;
 };

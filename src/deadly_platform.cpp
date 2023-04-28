@@ -1,9 +1,18 @@
 #include "header/deadly_platform.hpp"
+#include "header/gameController.hpp"
+#include "header/player.hpp"
+#include <typeinfo>
 
-bool DeadlyPlatform::isColliding(AABB obj){
-  bool isCol = AABB::isColliding(obj);
+DeadlyPlatform::DeadlyPlatform(Model model, Vector3 iPos, Color c)
+    : Platform(model, iPos, c) {}
 
-  // check if collider is instance of player
-
-  return isCol;
+bool DeadlyPlatform::isColliding(AABB &obj) {
+  if (AABB::isColliding(obj)){
+    if (typeid(obj).hash_code() == typeid(Player).hash_code()){
+      GameController::getInstance().killPlayer();
+      return false;
+    }
+    return true;
+  }
+  return false;
 }

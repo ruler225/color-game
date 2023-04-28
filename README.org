@@ -1,0 +1,210 @@
+#+options: ':nil *:t -:t ::t <:t H:3 \n:nil ^:{} arch:headline author:t
+#+options: broken-links:nil c:nil creator:nil d:(not "LOGBOOK") date:t e:t
+#+options: email:nil f:t inline:t num:t p:nil pri:nil prop:nil stat:t tags:t
+#+options: tasks:t tex:t timestamp:t title:t toc:nil todo:nil |:t
+#+title: 3GC3 Project --- Colour Game(Prototype)
+#+date: <2020-11-18 Wed>
+#+author: Omar Alkersh
+#+email: alkersho@mcmaster.ca
+#+language: en
+#+select_tags: export
+#+exclude_tags: noexport
+#+creator: Emacs 27.1 (Org mode 9.4)
+
+* Instructions
+
+** Installation
+
+   You will require to install [[https://freeimage.sourceforge.io/][freeimg]] library.
+
+*** Freeimg installation instructions
+    - Linus
+      - ~sudo apt-get install libfreeimage3 libfreeimage-dev~
+      - ~sudo pacman -S freeimage~
+    - Mac OSX
+      1. Use [[https://www.digitalocean.com/community/tutorials/how-to-install-and-use-homebrew-on-macos][homebrew]]
+      2. ~brew install freeimage~
+
+*** Compiling and running the program
+
+    Use ~make~ to compile the program or ~make run~ to compile and run. Must be used in the same location as this README.
+** Known issues
+   - The model scales are horrible
+   - The player model has some detection issues
+
+     Does not follow model guidelines for the project, thus is causing collision resolving issues. A simple cuboid does not cause these issues.
+   - The textures do not render
+** Controls
+
+   - Movement is done thought conventional ~W A S D~ controls
+   - @@html:<kbd>@@ SPC @@html:</kbd>@@ is used for jumping
+   - Mouse is used to look around
+   - @@html:<kbd>@@ <down-mouse-1> @@html:</kbd>@@ is used to bring the colour menu. Colour is set depending on where the mouse is on the screen when the button is released.
+     - Some platforms and work objects are visible and intractable only when you current colour is the same as their colour
+     - The available colours are ~RED~, ~BLUE~, and ~GREEN~.
+   - @@html:<kbd>@@ <escape> @@html:</kbd>@@ is used to pause the game.
+
+* TODO Class Diagram
+  - Update UML diagram
+  #+BEGIN_SRC plantuml :file uml/classes.png :exports results :results none file
+    @startuml
+    class physics {
+            float GRAVITY_CONST
+    }
+    class AABB {
+            {field} float<3> min
+            {field} float<3> max
+            {field} Color c
+            {method} float area()
+            {method} bool isColliding(AABB)
+    }
+    class AABBBranch {
+            {field} AABB left
+            {field} AABB right
+            {method} void add(AABB)
+            {method} void delete(AABB)
+            {method} void update(AABB)
+    }
+    class AABBTree {
+            {field} AABBBranch root
+            {method} AABB colliding(AABB)
+            {method} void add(AABB)
+            {method} void delete(AABB)
+            {method} void update(AABB)
+    }
+    class movingAABB {
+            {field} float<3> velocity
+            {abstract} {method} void update(timeDelta)
+    }
+    enum Color {
+            RED
+            BLUE
+            GREEN
+    }
+    class entities {
+            {field} Model model
+            {field} float<3> pos
+            {method} changeDir(theta, phi)
+    }
+    class passive_entities {
+    }
+    class player {
+            {method} void changeColor(Color)
+            {method} void jump()
+            {method} void input(key, x, y)
+    }
+    class platforms {
+            {field} Model model
+    }
+    class deadly_platform {
+
+    }
+    class level {
+            {field} float<3> playrInitPos
+            {field} vector<passive_entities> entities
+            {field} vector<platforms> platforms
+            {field} vecotr<light> lights
+    }
+    class Face << (S, #FFFF00) >> {
+            {field} int[3] verts
+            {field} int[3] norms
+            {field} int[3] textures
+    }
+    class obj_model {
+            {field} ? texture
+            {field} vector<float[3]> vertices
+            {field} vector<float[3]> normals
+            {field} vector<float[2]> textures
+            {field} vecotr<Face> faces;
+            {method} void draw()
+    }
+    class view
+    class light
+
+    physics "1" *-- "1" AABBTree
+    AABBTree "1" *-- "1" AABBBranch
+    AABB <|-- movingAABB
+    AABBBranch -right-|> AABB
+    /'
+     ' AABBBranch "1" *-left- "1..2" AABB
+     '/
+    AABB "1..2" -right-* "1" AABBBranch
+
+    AABB *--  Color
+
+    obj_model "1" *-right- "1..*" Face
+
+    entities <|-- passive_entities
+    entities <|-- player
+
+    level "1..*" *-- "*" entities
+    level "1..*" *-- "*" platforms
+
+    entities "1" *-- "1" obj_model
+
+    /'
+     ' light *-- obj_model
+     '/
+
+    movingAABB <|-- entities
+
+    AABB "1"--* platforms
+    platforms "1" *-- "1" obj_model
+    deadly_platform -left-|> platforms
+
+    @enduml
+  #+END_SRC
+
+  [[file:uml/classes.png]]
+
+  NOTE: Some aspects of this diagram differ from the actual implementation.
+* Collision
+** AABBs
+   For collision we are using [[https://developer.mozilla.org/en-US/docs/Games/Techniques/3D_collision_detection][AABBs]](Axis Aligned Bounding Box). They are simply a rectangle, cuboid in 3D, that totally encompasses the colliding object while being very quick to check collisions for. They are supposed to serve as initial collision detection followed by more complex collision detection algorithm, if the AABBs do collide. In our implementation, we are only using AABBs as we do not have an algorithm to check vertex/model level collision.
+
+   The base class AABB serves as the common implementation of all physics objects in the project.
+
+   It also directly inherited by the Platform class, as they are static physics object.
+*** Moving AABB
+    Very similar to AABB, but they also have velocity and an update function. The update serves to update the state of the MovingAABB. This is inherited by all entities. They can also be used by moving platforms, when those are implemented.
+** AABB Tree and [[https://www.azurefromthetrenches.com/introductory-guide-to-aabb-tree-collision-detection/][branches]]
+   An AABB tree serves as an efficient implementation for collision detection between all AABB objects in the world, a balanced binary tree. A tree consists of a single AABBBranch which consists of two AABB objects, these AABB objects can be any type of AABB, including an AABBBranch.
+
+   The top branch is the tree. The branch serves to update the AABBs in the tree, delete, add, and detect collision with other AABB objects; not with AABBBranch objects.
+** A note about use of AABBs
+   For more complex models, it is possible to have multiple AABBs. Essentially, and object would be represented by an AABB tree which doesn't detect internal collision. For example, the player would have an AABB between each joint.
+
+   This could be done in two different ways. The first is to manually create the AABB tree for each complex model.
+
+   The second is when exporting the obj model to export it in groups. Each group will end up having its own AABB inside of the entity AABB tree. This would be the better implantation as it will allow for more accurate collision detection while only utilising AABBs, or some variant that can rotate.
+* Model and obj files
+  A model class handles all model related operations. It responsible for loading the obj model and returning the relevant details to create an encompassing AABB. It is a field in all classes which should have a 3D representation in the world.
+* Camera
+  The camera is part of the player class. It uses the player's position and rotation to place itself in the world and look in the correct direction. The header for the camera has some constants which allows us to offset the position and rotation of the camera for a better experience.
+
+* Current state
+  At the moment, the program has no makefile. It is possible to be run, but there has been no tests if it does. We have only been working on the backend of it, i.e we have just implemented the engines and are working on integrating it all together.
+* Next step
+** Overlay and UI
+   We need a way to draw 2D objects relative to the viewport and unrelated to the global coordinates. I believe that ~glutOverlayDisplayFunc~ would be the best solution for this, but we need some more research in how to use it.
+*** CANCELLED Main Menu
+    CLOSED: [2020-12-07 Mon 02:15]
+    - State "CANCELLED"  from              [2020-12-07 Mon 02:15] \\
+      Not enough time implement a main menu. Requires to define game states.
+    A main menu would used to select and load specific level.
+*** In-game menu
+    This the menu that will allow the user to quit, resume, etc. It is used to pause the game.
+*** Colour selector
+    A menu that can be called mid-game to change the colour of the world.
+** DONE Drawing textures
+   CLOSED: [2020-12-07 Mon 02:15]
+  - Store textures
+** DONE Special colliders
+   CLOSED: [2020-12-07 Mon 02:15]
+*** Collider to indicate end location of the level
+    This is not a visible part of the world. Simply a volume where, if the player collides with it, indicates the completion of the level.
+* Developers
+  - Omar Alkersh
+  - Youssef Mikhail
+
+#  LocalWords:  AABB MovingAABB AABBs AABBBranch

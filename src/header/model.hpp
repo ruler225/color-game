@@ -1,9 +1,19 @@
 #pragma once
 
-#include <utility>
+#include <string>
 #include <vector>
 #include <array>
 #include "game.hpp"
+
+#ifdef __APPLE__
+#include <GLUT/glut.h>
+#include <OpenGL/gl.h>
+#include <OpenGL/glu.h>
+#else
+#include <GL/freeglut.h>
+#include <GL/gl.h>
+#include <GL/glu.h>
+#endif
 
 using std::vector;
 using std::array;
@@ -28,17 +38,22 @@ class Model {
 private:
   vector<Vector3> vertices;
   vector<Vector3> normals;
-  vector<Texture> textures;
+  vector<Texture> textureCoordinates;
   vector<Face> faces;
-  const char *texPath; // ?
+
+  GLuint textureBinding;
+  unsigned int tWidth;
+  unsigned int tHeight;
+  bool textured;
 
   Vector3 min;
   Vector3 max;
 
-  void importObj(const char *objPath);
+  void importObj(const std::string &objPath);
+  void loadTexture(const std::string &texPath);
 
-  void minV(Vector3 a, Vector3 b, Vector3 c);
-  void maxV(Vector3 a, Vector3 b, Vector3 c);
+  Vector3 minV(Vector3 a, Vector3 b);
+  Vector3 maxV(Vector3 a, Vector3 b);
 
   void computeMinMax();
 
@@ -55,8 +70,8 @@ public:
    *
    * @return     A new Model object.
    */
-  Model(const char *const objPath,
-        const char *const texPath); // what is best way to pass strings
+  Model(const std::string &objPath,
+        const std::string &texPath); // what is best way to pass strings
 
   /**
    * @brief      Draws the 3D model using OpenGL
@@ -68,8 +83,6 @@ public:
    */
   void draw(); // calls the openGL functions to draw object.
 
-  Vector3 getMin() { return min; }
-  Vector3 getMax() { return max; }
-
-  Model& operator=(const Model &other);
+  Vector3 getMin();
+  Vector3 getMax();
 };
